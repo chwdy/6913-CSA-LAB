@@ -43,7 +43,7 @@ public:
     ReadData1 = Registers[RdReg1.to_ullong()];
     ReadData2 = Registers[RdReg2.to_ullong()];
     if(WrtEnable.to_ullong()){
-      cout << "write" << WrtData << endl;
+      cout << "RFwrite pos" << WrtReg.to_ullong() <<" with data: "<<WrtData << endl;
       Registers[WrtReg.to_ullong()] = WrtData;
     }
   }
@@ -76,7 +76,7 @@ public:
   bitset<32> ALUOperation(bitset<3> ALUOP, bitset<32> oprand1, bitset<32> oprand2)
   {
     // TODO: implement!
-    cout<< "ALU : op" << ALUOP << " oprand1:" << oprand1.to_ulong() <<" oprand2:" << oprand2.to_ulong() << endl;
+    cout<< "ALU | opcode: " << ALUOP << " | oprand1: " << oprand1.to_ulong() <<" | oprand2:" << oprand2.to_ulong() << endl;
     switch(ALUOP.to_ulong())
     {
     // case 0: //add
@@ -84,7 +84,7 @@ public:
     //   break;
     case 1: //addu
       /* code */
-      cout << "addu : " << oprand1 << "&" << oprand2 << endl;
+      cout << "ALU | addu : " << oprand1 << " & " << oprand2 << endl;
       ALUresult = bitadd(oprand1,oprand2) ;
       break;
     // case 2://sub
@@ -107,7 +107,7 @@ public:
       ALUresult = ~(oprand1 | oprand2) ;
       break;
     default:
-    cout << "unsupport ALU operation : " << ALUOP.to_string() <<endl;
+    cout << "ALU | unsupport ALU operation : " << ALUOP.to_string() <<endl;
       break;
     }
     return ALUresult;
@@ -144,7 +144,7 @@ public:
     // (Read the byte at the ReadAddress and the following three byte).
     Instruction = bitset<32>(0);
     bitset<32> addrptr = bitset<32>(ReadAddress.to_ullong());
-    printf("INS:%llu || addr:%llu\n", Instruction.to_ullong(), addrptr.to_ullong());
+    printf("Read INS memory | addr:%llu\n", Instruction.to_ullong(), addrptr.to_ullong());
     Instruction = bitadd(Instruction, bitset<32>(IMem[addrptr.to_ulong()].to_string()));
 
     Instruction <<= 8;
@@ -207,16 +207,16 @@ public:
       readdata <<=8;
       adrptr +=1;
       readdata = bitadd(readdata, bitset<32>(DMem[adrptr].to_string()));
-      cout << "memory access:" << readdata << endl;
+      cout << "Memory read | data check after read:" << readdata << endl;
     }
     if (writemem.to_ullong()){
       adrptr = Address.to_ullong();
-      cout <<"data to write in:" << WriteData.to_string()<<"position:"<<adrptr << endl;
+      cout << "Memory write | Pos: " << adrptr <<" | data: "<<WriteData << endl;
       DMem[adrptr] = bitset<8>(WriteData.to_string().substr(0,8));
       DMem[adrptr+1] = bitset<8>(WriteData.to_string().substr(8,8));
       DMem[adrptr+2] = bitset<8>(WriteData.to_string().substr(16,8));
       DMem[adrptr+3] = bitset<8>(WriteData.to_string().substr(24,8));
-      cout<<"memory check:" <<DMem[adrptr]<<DMem[adrptr+1]<<DMem[adrptr+2]<<DMem[adrptr+3]<<endl;
+      cout<<"Memory write | Wrote in data integrity check:" <<DMem[adrptr]<<DMem[adrptr+1]<<DMem[adrptr+2]<<DMem[adrptr+3]<<endl;
     }   
     
     return readdata;
@@ -289,6 +289,8 @@ int main()
   bool isEq;
   int NextPC;
   string strins;
+  //debug
+  int looplimit = 30;
 
   while (1)
   {
@@ -297,9 +299,12 @@ int main()
     // printf("PC:%d",PC.to_ullong());
     
     count++;
-    cout << "count:" << count << " PC: " << PC.to_ullong() << "|||" << bitset<32>(0b11111111111111111111111111111111) << " ==== " << ins << "\n";
-    if (ins == bitset<32>(0b11111111111111111111111111111111) || count > 30)
+    cout << "Round:" << count << " PC: " << PC.to_ullong() << "|||  " <<  ins << "\n";
+    if (ins == bitset<32>(0b11111111111111111111111111111111) || count > looplimit)
     {
+      if (count > looplimit){
+        cout << "exit because loop reach limits : " << looplimit << endl;
+      }
       break;
     }
     // decode(Read RF)
@@ -326,7 +331,7 @@ int main()
     NextPC = 0; //TODO
     if (Itype)
     {
-      myRF.ReadWrite(bitset<5>(strins.substr(6, 5)), bitset<5>(strins.substr(11, 5)), bitset<5>(strins.substr(11, 5)), bitset<32>(0),!isStore);
+      myRF.ReadWrite(bitset<5>(strins.substr(6, 5)), bitset<5>(strins.substr(11, 5)), bitset<5>(strins.substr(11, 5)), bitset<32>(0),Wrtenable);
     }
     else if (Jtype){
 
@@ -348,7 +353,7 @@ int main()
        +"00");
     isEq = myRF.ReadData1 == myRF.ReadData2;
     if(isBranch && isEq){
-      cout << "branch to: " << adder.to_ullong()<< "itype:"<< Itype << endl;
+      cout << "branch to: " << adder.to_ullong()<< endl;
       PC = adder;
     }else if(Jtype){
       cout << "jump to: " << concat.to_ullong()<<endl;
@@ -367,10 +372,10 @@ int main()
     // Write back to RF
      if (Itype)
     {
-      cout << "i type: store:" <<isStore<<"memdata:"<<myDataMem.readdata<<endl;
+      cout << "i type writeback stage | store:" <<isStore<< " wrtenable: "<< Wrtenable<<" || data:"<<myDataMem.readdata<<endl;
       myRF.ReadWrite(bitset<5>(strins.substr(6, 5)), bitset<5>(strins.substr(11, 5)), bitset<5>(strins.substr(11, 5)),
       isLoad? myDataMem.readdata: myALU.ALUresult,
-      !isStore);
+      Wrtenable);
     }
     else if (Jtype){
 
