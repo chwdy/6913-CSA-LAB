@@ -21,9 +21,7 @@ bitset<32> bitadd(bitset<32> a, bitset<32> b);
 //////////////////
 /*
 TODO
-ALU op
-nextpc
-iseuqal
+branch should not be iswrite==1
 
 
 */////////////////////
@@ -105,9 +103,9 @@ public:
     case 6://xor
       ALUresult = oprand1 ^ oprand2 ;
       break;
-    // case 7://nor
-    //   /* code */
-    //   break;
+    case 7://nor
+      ALUresult = ~(oprand1 | oprand2) ;
+      break;
     default:
     cout << "unsupport ALU operation : " << ALUOP.to_string() <<endl;
       break;
@@ -126,7 +124,7 @@ public:
     ifstream imem;
     string line;
     int i = 0;
-    imem.open("imem.txt");
+    imem.open("imem2.txt");
     if (imem.is_open())
     {
       while (getline(imem, line))
@@ -278,6 +276,8 @@ int main()
   INSMem myInsMem = INSMem();
   DataMem myDataMem = DataMem();
   bitset<32> PC = bitset<32>(0);
+  bitset<32> concat = bitset<32> (0);
+  bitset<32> adder = bitset<32>(0);// jump on branch
   int count = 0;
   bool isLoad;
   bool isStore;
@@ -286,18 +286,17 @@ int main()
   bool Wrtenable;
   bool Jtype;
   bool isBranch;
+  bool isEq;
   int NextPC;
   string strins;
+
   while (1)
   {
     // Fetch
     std::bitset<32> ins = myInsMem.ReadMemory(PC);
     // printf("PC:%d",PC.to_ullong());
-    PC = bitadd(PC, bitset<32>(4));
+    
     count++;
-    // If current insturciton is "11111111111111111111111111111111", then break;
-    // printf("count:%d / pc:%llu =======  %llu and %llu\n", count, PC.to_ullong(), ins.to_ullong(), bitset<32>("11111111111111111111111111111111").to_ullong());
-    // printf("count:%d / pc:%s =======  %s and %s\n", count, PC.to_string("0","1"), ins.to_string("0","1"), bitset<32>("11111111111111111111111111111111").to_string("0","1"));
     cout << "count:" << count << " PC: " << PC.to_ullong() << "|||" << bitset<32>(0b11111111111111111111111111111111) << " ==== " << ins << "\n";
     if (ins == bitset<32>(0b11111111111111111111111111111111) || count > 30)
     {
@@ -308,7 +307,7 @@ int main()
     isLoad = strins.substr(0, 6) == "100011" ? true : false;
     cout << "strins.substr(0, 6):" <<  strins.substr(0, 6) <<endl;
     isStore = strins.substr(0, 6) == "101011" ? true : false;
-    Itype = (strins.substr(0, 6) != "000000" && strins.substr(0, 4) != "0001") ? true : false;
+    Itype = (strins.substr(0, 6) != "000000" && strins.substr(0, 5) != "00001") ? true : false;
     Jtype = strins.substr(0, 6) == "000010" ? true : false;
     isBranch = strins.substr(0, 6) == "000100" ? true : false;
     if (isLoad || isStore)
@@ -329,10 +328,36 @@ int main()
     {
       myRF.ReadWrite(bitset<5>(strins.substr(6, 5)), bitset<5>(strins.substr(11, 5)), bitset<5>(strins.substr(11, 5)), bitset<32>(0),!isStore);
     }
-    else
-    {
+    else if (Jtype){
+
+    }else
+    {//rtype
       myRF.ReadWrite(bitset<5>(strins.substr(6, 5)), bitset<5>(strins.substr(11, 5)), bitset<5>(strins.substr(16, 5)), bitset<32>(0), bitset<1>(0));
     }
+    //cout<<"debug string concat:"<< bitset<4>(bitadd(PC,bitset<32>(4)).to_string().substr(0,4)).to_string()+strins.substr(6, 26)+string("00")<<endl;
+    concat = bitset<32>(
+      bitset<4>(
+        bitadd(PC,bitset<32>(4)).to_string().substr(0,4)
+        ).to_string()//4bit
+      +strins.substr(6, 26)+"00");
+    //After RF
+    adder = bitset<32>(
+      signextimm(
+        bitset<16>(strins.substr(16,16))
+        ).to_string().substr(2,30)
+       +"00");
+    isEq = myRF.ReadData1 == myRF.ReadData2;
+    if(isBranch && isEq){
+      cout << "branch to: " << adder.to_ullong()<< "itype:"<< Itype << endl;
+      PC = adder;
+    }else if(Jtype){
+      cout << "jump to: " << concat.to_ullong()<<endl;
+      PC = concat;
+    }else{
+      PC = bitadd(PC,bitset<32>(4));
+    }
+
+
     // Execute
     myALU.ALUOperation(ALUOp, myRF.ReadData1,
      Itype? signextimm(bitset<16>(strins.substr(16,32))) :myRF.ReadData2
@@ -347,8 +372,10 @@ int main()
       isLoad? myDataMem.readdata: myALU.ALUresult,
       !isStore);
     }
-    else
-    {
+    else if (Jtype){
+
+    }else
+    {//rtype
       myRF.ReadWrite(bitset<5>(strins.substr(6, 5)), bitset<5>(strins.substr(11, 5)), bitset<5>(strins.substr(16,5)), myALU.ALUresult, bitset<1>(1));
     }
     myRF.OutputRF(); // dump RF;
