@@ -82,28 +82,28 @@ public:
     // case 0: //add
     //   ALUresult = bitadd(oprand1,oprand2) ;
     //   break;
-    case 1: //addu
-      /* code */
+    case ADDU: //addu
       cout << "ALU | addu : " << oprand1 << " & " << oprand2 << endl;
       ALUresult = bitadd(oprand1,oprand2) ;
       break;
-    // case 2://sub
-    //   /* code */
-    //   break;
+    case SUBU://sub
+      cout << "ALU | subu : " << oprand1 << " & " << oprand2 << endl;
+      bitset<32> temp = bitadd(~(oprand2),1);
+      ALUresult = bitadd(oprand1,temp) ;
+      break;
     // case 3://subu
     //   /* code */
     //   break;
-    case 4://and
-      /* code */
+    case AND://and
       ALUresult = oprand1 & oprand2 ;
       break;
-    case 5://or
+    case OR://or
       ALUresult = oprand1 | oprand2 ;
       break;
     case 6://xor
       ALUresult = oprand1 ^ oprand2 ;
       break;
-    case 7://nor
+    case NOR://nor
       ALUresult = ~(oprand1 | oprand2) ;
       break;
     default:
@@ -140,8 +140,6 @@ public:
 
   bitset<32> ReadMemory(bitset<32> ReadAddress)
   {
-    // TODO: implement!
-    // (Read the byte at the ReadAddress and the following three byte).
     Instruction = bitset<32>(0);
     bitset<32> addrptr = bitset<32>(ReadAddress.to_ullong());
     printf("Read INS memory | addr:%llu\n", Instruction.to_ullong(), addrptr.to_ullong());
@@ -191,14 +189,12 @@ public:
   }
   bitset<32> MemoryAccess(bitset<32> Address, bitset<32> WriteData, bitset<1> readmem, bitset<1> writemem)
   {
-    // TODO: implement!
     int adrptr;
     readdata = bitset<32> (0);
     if (readmem.to_ullong()){
       adrptr = Address.to_ullong();
       readdata = bitadd(readdata, bitset<32>(DMem[adrptr].to_string()));
       readdata <<=8;
-      
       adrptr +=1;
       readdata = bitadd(readdata, bitset<32>(DMem[adrptr].to_string()));
       readdata <<=8;
@@ -248,13 +244,10 @@ bitset<32> bitadd(bitset<32> a, bitset<32> b)
   bitset<32> temp = b;
   bitset<32> newre;
   bitset<32> newtemp;
-
   do
   {
-    // printf("add:%d,%d \n",re.to_ullong(),temp.to_ullong());
     newre = re ^ temp;
     newtemp = re & temp;
-    // printf("add-new:%d,%d \n",newre.to_ullong(),newtemp.to_ullong());
     newtemp <<= 1;
     re = newre;
     temp = newtemp;
@@ -287,7 +280,6 @@ int main()
   bool Jtype;
   bool isBranch;
   bool isEq;
-  int NextPC;
   string strins;
   //debug
   int looplimit = 30;
@@ -296,8 +288,6 @@ int main()
   {
     // Fetch
     std::bitset<32> ins = myInsMem.ReadMemory(PC);
-    // printf("PC:%d",PC.to_ullong());
-    
     count++;
     cout << "Round:" << count << " PC: " << PC.to_ullong() << "|||  " <<  ins << "\n";
     if (ins == bitset<32>(0b11111111111111111111111111111111) || count > looplimit)
@@ -328,7 +318,6 @@ int main()
       ALUOp = bitset<3>(strins.substr(3, 3));
     }
     Wrtenable = (isStore || isBranch || Jtype) ? false : true;
-    NextPC = 0; //TODO
     if (Itype)
     {
       myRF.ReadWrite(bitset<5>(strins.substr(6, 5)), bitset<5>(strins.substr(11, 5)), bitset<5>(strins.substr(11, 5)), bitset<32>(0),Wrtenable);
@@ -339,7 +328,6 @@ int main()
     {//rtype
       myRF.ReadWrite(bitset<5>(strins.substr(6, 5)), bitset<5>(strins.substr(11, 5)), bitset<5>(strins.substr(16, 5)), bitset<32>(0), bitset<1>(0));
     }
-    //cout<<"debug string concat:"<< bitset<4>(bitadd(PC,bitset<32>(4)).to_string().substr(0,4)).to_string()+strins.substr(6, 26)+string("00")<<endl;
     concat = bitset<32>(
       bitset<4>(
         bitadd(PC,bitset<32>(4)).to_string().substr(0,4)
