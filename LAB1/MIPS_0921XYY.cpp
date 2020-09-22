@@ -76,40 +76,26 @@ public:
   bitset<32> ALUOperation(bitset<3> ALUOP, bitset<32> oprand1, bitset<32> oprand2)
   {
     // TODO: implement!
-    cout<< "ALU | opcode: " << ALUOP << " | oprand1: " << oprand1.to_ulong() <<" | oprand2:" << oprand2.to_ulong() << endl;
-    switch(ALUOP.to_ulong())
-    {
-    // case 0: //add
-    //   ALUresult = bitadd(oprand1,oprand2) ;
-    //   break;
-    case 1: //addu
-      /* code */
-      cout << "ALU | addu : " << oprand1 << " & " << oprand2 << endl;
-      ALUresult = bitadd(oprand1,oprand2) ;
-      break;
-    // case 2://sub
-    //   /* code */
-    //   break;
-    // case 3://subu
-    //   /* code */
-    //   break;
-    case 4://and
-      /* code */
-      ALUresult = oprand1 & oprand2 ;
-      break;
-    case 5://or
-      ALUresult = oprand1 | oprand2 ;
-      break;
-    case 6://xor
-      ALUresult = oprand1 ^ oprand2 ;
-      break;
-    case 7://nor
-      ALUresult = ~(oprand1 | oprand2) ;
-      break;
-    default:
-    cout << "ALU | unsupport ALU operation : " << ALUOP.to_string() <<endl;
-      break;
-    }
+    
+    int op1 = int(oprand1.to_ulong());
+	int op2 = int(oprand2.to_ulong());
+	   
+	   int opop = ALUOP.to_ulong();
+	   unsigned int int_aluresult;
+        if (opop == ADDU )				// add unsigned '001'
+      	    int_aluresult = op1+op2;
+        else if (opop == SUBU )			// sub unsigned '011'
+      	    int_aluresult = op1-op2;	
+        else if (opop ==  AND)			// and '100' we should use one & because is bitwise and 
+      	    int_aluresult = op1 & op2;  
+        else if (opop == OR )			// or '101' we should use one | because is bitwise or 
+      	    int_aluresult = op1 |op2;
+      	else if (opop ==  NOR)			// nor '111'
+      	    int_aluresult = ~(op1|op2);
+      	  
+     
+      return ALUresult = bitset<32>(int_aluresult);
+      
     return ALUresult;
   }
 };
