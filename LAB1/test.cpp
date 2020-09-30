@@ -16,8 +16,6 @@ bitset<32> b;
     //           << b.to_string('*') << '\n'
     //           << b.to_string('O', 'X') << '\n';
 
-    
-
     b.set();
     b.set(15,false);
     b.set(31,false);
