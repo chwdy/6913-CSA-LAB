@@ -2,6 +2,7 @@
     "files.associations": {
         "*.js": "javascriptreact",
         "bitset": "cpp",
-        "iostream": "cpp"
+        "iostream": "cpp",
+        "xstring": "cpp"
     }
 }
