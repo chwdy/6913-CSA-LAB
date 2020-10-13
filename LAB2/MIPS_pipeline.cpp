@@ -284,6 +284,46 @@ bitset<32> signextimm(bitset<16> ori)
     return res;
 }
 
+stateStruct stateInit(stateStruct state)
+{
+    state.IF.PC = bitset<32>(0);
+    state.IF.nop = 0;
+
+    state.ID.Instr = bitset<32>(0);
+    state.ID.nop = 1;
+
+    state.EX.Read_data1 = bitset<32>(0);
+    state.EX.Read_data2 = bitset<32>(0);
+    state.EX.Imm = bitset<16>(0);
+    state.EX.Rs = bitset<5>(0);
+    state.EX.Rt = bitset<5>(0);
+    state.EX.Wrt_reg_addr = bitset<5>(0);
+    state.EX.is_I_type = 0;
+    state.EX.rd_mem = 0;
+    state.EX.wrt_mem = 0;
+    state.EX.alu_op = 1;
+    state.EX.wrt_enable = 0;
+    state.EX.nop = 1;
+
+    state.MEM.ALUresult = bitset<32>(0);
+    state.MEM.Store_data = bitset<32>(0);
+    state.MEM.Rs = bitset<5>(0);
+    state.MEM.Rt = bitset<5>(0);
+    state.MEM.Wrt_reg_addr = bitset<5>(0);
+    state.MEM.rd_mem = 0;
+    state.MEM.wrt_mem = 0;
+    state.MEM.wrt_enable = 0;
+    state.MEM.nop = 1;
+
+    state.WB.Wrt_data = bitset<32>(0);
+    state.WB.Rs = bitset<5>(0);
+    state.WB.Rt = bitset<5>(0);
+    state.WB.Wrt_reg_addr = bitset<5>(0);
+    state.WB.wrt_enable = 0;
+    state.WB.nop = 1;
+    return state;
+}
+
 int main()
 {
 
@@ -291,6 +331,7 @@ int main()
     INSMem myInsMem = INSMem();
     DataMem myDataMem = DataMem();
     stateStruct state;
+    state = stateInit(state);
     state.IF.nop = 0;
     state.ID.nop = 1;
     state.EX.nop = 1;
@@ -314,10 +355,16 @@ int main()
     while (1)
     {
         stateStruct newState;
-
+        newState = stateInit(newState);
         /* --------------------- WB stage --------------------- */
         if (state.WB.nop)
         { // do nothing
+            newState.WB.Wrt_data = state.WB.Wrt_data;
+            newState.WB.Rs = state.WB.Rs;
+            newState.WB.Rt = state.WB.Rt;
+            newState.WB.Wrt_reg_addr = state.WB.Wrt_reg_addr;
+            newState.WB.wrt_enable = state.WB.wrt_enable;
+            newState.WB.nop = state.WB.nop;
         }
         else
         {
@@ -330,19 +377,33 @@ int main()
         /* --------------------- MEM stage --------------------- */
         if (state.MEM.nop)
         {
+            newState.MEM.ALUresult = state.MEM.ALUresult;
+            newState.MEM.Store_data = state.MEM.Store_data;
+            newState.MEM.Rs = state.MEM.Rs;
+            newState.MEM.Rt = state.MEM.Rt;
+            newState.MEM.Wrt_reg_addr = state.MEM.Wrt_reg_addr;
+            newState.MEM.rd_mem = state.MEM.rd_mem;
+            newState.MEM.wrt_mem = state.MEM.wrt_mem;
+            newState.MEM.wrt_enable = state.MEM.wrt_enable;
         }
         else
         {
             if (state.MEM.rd_mem)
             {
                 myDataMem.readDataMem(state.MEM.ALUresult);
+                newState.WB.Wrt_data = myDataMem.ReadData;
             }
-            if (state.MEM.wrt_mem)
+            else if (state.MEM.wrt_mem)
             {
                 myDataMem.writeDataMem(state.MEM.ALUresult, state.MEM.Store_data);
+                newState.WB.Wrt_data = state.MEM.ALUresult;
             }
+            else
+            {
+                newState.WB.Wrt_data = state.MEM.ALUresult;
+            }
+
             //TODO: need tp determine which data should pass: alu result to RF / mem result to
-            newState.WB.Wrt_data = myDataMem.ReadData;
             newState.WB.Rs = state.MEM.Rs;
             newState.WB.Rt = state.MEM.Rt;
             newState.WB.Wrt_reg_addr = state.MEM.Wrt_reg_addr;
@@ -354,6 +415,17 @@ int main()
 
         if (state.EX.nop)
         {
+            newState.EX.Read_data1 = state.EX.Read_data1;
+            newState.EX.Read_data2 = state.EX.Read_data2;
+            newState.EX.Imm = state.EX.Imm;
+            newState.EX.Rs = state.EX.Rs;
+            newState.EX.Rt = state.EX.Rt;
+            newState.EX.Wrt_reg_addr = state.EX.Wrt_reg_addr;
+            newState.EX.is_I_type = state.EX.is_I_type;
+            newState.EX.rd_mem = state.EX.rd_mem;
+            newState.EX.wrt_mem = state.EX.wrt_mem;
+            newState.EX.alu_op = state.EX.alu_op;
+            newState.EX.wrt_enable = state.EX.wrt_enable;
         }
         else
         {
@@ -384,6 +456,7 @@ int main()
         /* --------------------- ID stage --------------------- */
         if (state.ID.nop)
         {
+            newState.ID.Instr = state.ID.Instr;
         }
         else
         {
@@ -437,6 +510,7 @@ int main()
 
         if (state.IF.nop)
         {
+            newState.IF.PC = state.IF.PC;
         }
         else
         {
