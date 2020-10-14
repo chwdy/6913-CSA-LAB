@@ -346,8 +346,13 @@ int main()
     bitset<3> ALUOp;
     bool Jtype;
     bool isBranch;
-
     bool Wrtenable;
+    // forwarding
+    const int FROM_RF = 1;
+    const int FROM_ALU = 2;
+    const int FROM_MEM = 3;
+    int forwardA = 0;
+    int forwardB = 0;
 
     int cycle = 0;
     bool halt = false;
@@ -429,8 +434,58 @@ int main()
         }
         else
         {
-            bitset<32> oprand2 = state.EX.is_I_type ? signextimm(state.EX.Imm) : state.EX.Read_data2;
-            bitset<32> oprand1 = state.EX.Read_data1;
+            bitset<32> oprand1;
+            bitset<32> oprand2;
+            // forwarding unit
+            forwardA = FROM_RF;
+            forwardB = FROM_RF;
+            //rs=data1,rt=data2
+            if(state.WB.wrt_enable && state.EX.Rs == state.WB.Wrt_reg_addr){
+            forwardA = FROM_MEM;
+            }
+            if(state.WB.wrt_enable && state.EX.Rt == state.WB.Wrt_reg_addr){
+            forwardB = FROM_MEM;
+            }
+            if(state.MEM.wrt_enable && state.EX.Rs == state.MEM.Wrt_reg_addr){
+            forwardA = FROM_ALU;
+            }
+            if(state.MEM.wrt_enable && state.EX.Rt == state.MEM.Wrt_reg_addr){
+            forwardB = FROM_ALU;
+            }
+
+            //forward mux
+            switch (forwardA)
+            {
+            case FROM_RF:
+                oprand1 = state.EX.Read_data1;
+                break;
+            case FROM_ALU:
+                oprand1 = state.MEM.ALUresult;
+                break;
+            case FROM_MEM:
+                oprand1 = state.WB.Wrt_data;
+                break;
+            default:
+                cout << "uncatch forward on forwardA ,Value = " << forwardA << endl;
+                break;
+            }
+            switch (forwardB)
+            {
+            case FROM_RF:
+                oprand2 = state.EX.Read_data2;
+                break;
+            case FROM_ALU:
+                oprand2 = state.MEM.ALUresult;
+                break;
+            case FROM_MEM:
+                oprand2 = state.WB.Wrt_data;
+                break;
+            default:
+                cout << "uncatch forward on forwardB ,Value = " << forwardB << endl;
+                break;
+            }
+
+            oprand2 = state.EX.is_I_type ? signextimm(state.EX.Imm) : state.EX.Read_data2;
 
             if (state.EX.alu_op)
             {
@@ -460,6 +515,8 @@ int main()
         }
         else
         {
+
+            //TODO: handle forwarding fail
 
             strins = state.ID.Instr.to_string();
             isLoad = strins.substr(0, 6) == "100011" ? true : false;
