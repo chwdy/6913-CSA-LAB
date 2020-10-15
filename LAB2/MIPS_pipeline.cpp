@@ -353,6 +353,8 @@ int main()
     const int FROM_MEM = 3;
     int forwardA = 0;
     int forwardB = 0;
+    //forward failing
+    bool stall = false;
 
     int cycle = 0;
     bool halt = false;
@@ -360,7 +362,8 @@ int main()
     while (1)
     {
         stateStruct newState;
-        newState = stateInit(newState);
+        //newState = stateInit(newState);
+        newState = state;//to keep result same as answer, but init to 0 is also fine
         /* --------------------- WB stage --------------------- */
         if (state.WB.nop)
         { // do nothing
@@ -401,7 +404,8 @@ int main()
             else if (state.MEM.wrt_mem)
             {
                 myDataMem.writeDataMem(state.MEM.ALUresult, state.MEM.Store_data);
-                newState.WB.Wrt_data = state.MEM.ALUresult;
+                //following row seems useless but keep the result same as answer;
+                newState.WB.Wrt_data = myDataMem.ReadData;//state.MEM.ALUresult;
             }
             else
             {
@@ -440,17 +444,21 @@ int main()
             forwardA = FROM_RF;
             forwardB = FROM_RF;
             //rs=data1,rt=data2
-            if(state.WB.wrt_enable && state.EX.Rs == state.WB.Wrt_reg_addr){
-            forwardA = FROM_MEM;
+            if (state.WB.wrt_enable && state.EX.Rs == state.WB.Wrt_reg_addr)
+            {
+                forwardA = FROM_MEM;
             }
-            if(state.WB.wrt_enable && state.EX.Rt == state.WB.Wrt_reg_addr){
-            forwardB = FROM_MEM;
+            if (state.WB.wrt_enable && state.EX.Rt == state.WB.Wrt_reg_addr)
+            {
+                forwardB = FROM_MEM;
             }
-            if(state.MEM.wrt_enable && state.EX.Rs == state.MEM.Wrt_reg_addr){
-            forwardA = FROM_ALU;
+            if (state.MEM.wrt_enable && state.EX.Rs == state.MEM.Wrt_reg_addr)
+            {
+                forwardA = FROM_ALU;
             }
-            if(state.MEM.wrt_enable && state.EX.Rt == state.MEM.Wrt_reg_addr){
-            forwardB = FROM_ALU;
+            if (state.MEM.wrt_enable && state.EX.Rt == state.MEM.Wrt_reg_addr)
+            {
+                forwardB = FROM_ALU;
             }
 
             //forward mux
@@ -516,8 +524,6 @@ int main()
         else
         {
 
-            //TODO: handle forwarding fail
-
             strins = state.ID.Instr.to_string();
             isLoad = strins.substr(0, 6) == "100011" ? true : false;
             cout << "strins.substr(0, 6):" << strins.substr(0, 6) << endl;
@@ -553,6 +559,17 @@ int main()
                 newState.EX.alu_op = ALUOp.to_ulong() == 1;
                 newState.EX.is_I_type = false;
             }
+            //handle forwarding fail
+            if (state.EX.rd_mem && (state.EX.Wrt_reg_addr == bitset<5>(strins.substr(6, 5)) || state.EX.Wrt_reg_addr == bitset<5>(strins.substr(11, 5))))
+            {
+                stall = true;
+            }
+            //need to stall twice if there is no forwarding
+            if (state.MEM.rd_mem && (state.MEM.Wrt_reg_addr == bitset<5>(strins.substr(6, 5)) || state.MEM.Wrt_reg_addr == bitset<5>(strins.substr(11, 5))))
+            {
+                stall = true;
+            }
+
             newState.EX.Read_data1 = myRF.readRF(bitset<5>(strins.substr(6, 5)));
             newState.EX.Read_data2 = myRF.readRF(bitset<5>(strins.substr(11, 5)));
             newState.EX.Rs = bitset<5>(strins.substr(6, 5));
@@ -582,22 +599,22 @@ int main()
                 }
                 halt = true;
             }
-            newState.ID.Instr = myInsMem.Instruction;
-        }
+            //stall control
+            newState.ID.Instr  = stall?state.ID.Instr:myInsMem.Instruction;
+            //pc control
+            if(false){
+                //pc directly set to jump address
+                //might need to add4 then add relative
+            }else{
+                newState.IF.PC =  (stall||halt)?state.IF.PC:bitadd(state.IF.PC,bitset<32>(4));
+            }
 
-        if (halt)
-        {
-            newState.IF.PC = state.IF.PC;
-            newState.ID.nop = 1;
-            newState.IF.nop = 1;
-        }
-        else
-        {
             newState.ID.nop = state.IF.nop;
-            newState.IF.PC = bitadd(state.IF.PC, bitset<32>(4));
-            newState.IF.nop = 0;
         }
-
+        // halt don't need to pass to ID, just nop ID
+        //starting next round, ID will inheritate the nop from IF
+        newState.IF.nop = halt ? 1 : 0;
+        newState.ID.nop = halt ? 1 : 0;
         ////
 
         if (state.IF.nop && state.ID.nop && state.EX.nop && state.MEM.nop && state.WB.nop)
