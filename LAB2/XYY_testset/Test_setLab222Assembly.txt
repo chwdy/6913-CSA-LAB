@@ -1,0 +1,20 @@
+lw $at, 0($zero)  # load 0 int $1
+lw $v0, 4($zero) # load 4 into $2
+add $a1,$at,$v0  # add $1 $2 into $5
+sw $a1, 16($zero)  # store $5 content  to 16
+lw $t0, 20($zero)  #load 20 into $8
+lw $t1,24($zero)  # load 24 into $9
+lw $t2, 28($zero)  # load 28 into $10
+lw $a0, 12($zero) #load 12 into $4
+lw $a2, 4($zero)  # load 4 into $6
+lw $a3, 32($zero)  #load 32 into $7
+add $at,$at,$a0   #add $1 $4 into $1
+add $v0,$v0,$a2  # add $2 $6 into $2
+add $v1,$v1,$a3  #add $3 $7 into $3
+add $at, $at, $t2  #add $1 $10 into $1
+sw $v0, 4($zero) #store$2 content into 4
+sw $v1, 8($zero) #store$3 content into 8
+sw $at, 0($zero)#store $1 content into 0
+lw $at, 0($zero)  # load 0 int $1
+beq $at, $t0, -6 #if $1 equal $8 backward 6
+beq $v0,$t2,-9 #if $2 equal $9 backward 9
