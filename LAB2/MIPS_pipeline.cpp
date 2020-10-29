@@ -278,8 +278,10 @@ bitset<32> bitadd(bitset<32> a, bitset<32> b)
 
 bitset<32> signextimm(bitset<16> ori)
 {
-    bitset<32> res = bitset<32>(ori.to_string().substr(0, 1));
+    int msb = ori.to_string().substr(0, 1)=="1"?-1:0;
+    bitset<32> res = bitset<32>(msb);
     res <<= 16;
+    cout<<"res after immextend"<<ori.to_string().substr(0, 1)<<endl;
     res = bitadd(res, bitset<32>(ori.to_string()));
     return res;
 }
@@ -457,24 +459,30 @@ int main()
         {
             bitset<32> oprand1;
             bitset<32> oprand2;
+            bitset<32> rs;
+            bitset<32> rt;
             // forwarding unit
             forwardA = FROM_RF;
             forwardB = FROM_RF;
             //rs=data1,rt=data2
-            if (state.WB.wrt_enable && state.EX.Rs == state.WB.Wrt_reg_addr)
+            if (state.WB.wrt_enable && state.EX.Rs == state.WB.Wrt_reg_addr&& state.WB.nop ==0)
             {
+                cout<<"FFForward a from mem"<<endl;
                 forwardA = FROM_MEM;
             }
-            if (state.WB.wrt_enable && state.EX.Rt == state.WB.Wrt_reg_addr)
+            if (state.WB.wrt_enable && state.EX.Rt == state.WB.Wrt_reg_addr&& state.WB.nop ==0)
             {
+                cout<<"Forward b from mem"<<endl;
                 forwardB = FROM_MEM;
             }
-            if (state.MEM.wrt_enable && state.EX.Rs == state.MEM.Wrt_reg_addr)
+            if (state.MEM.wrt_enable && state.EX.Rs == state.MEM.Wrt_reg_addr&& state.MEM.nop ==0)
             {
+                cout<<"FFForward a from alu"<<endl;
                 forwardA = FROM_ALU;
             }
-            if (state.MEM.wrt_enable && state.EX.Rt == state.MEM.Wrt_reg_addr)
+            if (state.MEM.wrt_enable && state.EX.Rt == state.MEM.Wrt_reg_addr&& state.MEM.nop ==0)
             {
+                cout<<"Forward b from alu"<<endl;
                 forwardB = FROM_ALU;
             }
 
@@ -482,13 +490,13 @@ int main()
             switch (forwardA)
             {
             case FROM_RF:
-                oprand1 = state.EX.Read_data1;
+                rs = state.EX.Read_data1;
                 break;
             case FROM_ALU:
-                oprand1 = state.MEM.ALUresult;
+                rs = state.MEM.ALUresult;
                 break;
             case FROM_MEM:
-                oprand1 = state.WB.Wrt_data;
+                rs = state.WB.Wrt_data;
                 break;
             default:
                 cout << "uncatch forward on forwardA ,Value = " << forwardA << endl;
@@ -497,25 +505,28 @@ int main()
             switch (forwardB)
             {
             case FROM_RF:
-                oprand2 = state.EX.Read_data2;
+                rt = state.EX.Read_data2;
                 break;
             case FROM_ALU:
-                oprand2 = state.MEM.ALUresult;
+                rt = state.MEM.ALUresult;
                 break;
             case FROM_MEM:
-                oprand2 = state.WB.Wrt_data;
+            cout << "B from mem " << state.WB.Wrt_data << endl;
+                rt = state.WB.Wrt_data;
                 break;
             default:
                 cout << "uncatch forward on forwardB ,Value = " << forwardB << endl;
                 break;
             }
-
-            oprand2 = state.EX.is_I_type ? signextimm(state.EX.Imm) : state.EX.Read_data2;
+            //cout << "special for cycle 5  " << oprand2 << " & " << state.WB.Wrt_data << endl;
+            oprand1 = rs;
+            oprand2 = state.EX.is_I_type ? signextimm(state.EX.Imm) : rt;
 
             if (state.EX.alu_op)
             {
                 cout << "ALU | addu : " << oprand1 << " & " << oprand2 << endl;
                 newState.MEM.ALUresult = bitadd(oprand1, oprand2);
+                cout<<bitadd(oprand1, oprand2).to_string()<<endl;
             }
             else
             {
@@ -523,7 +534,7 @@ int main()
                 bitset<32> temp = bitadd(~(oprand2), 1);
                 newState.MEM.ALUresult = bitadd(oprand1, temp);
             }
-            newState.MEM.Store_data = state.EX.Read_data2;
+            newState.MEM.Store_data = rt;
             newState.MEM.Rs = state.EX.Rs;
             newState.MEM.Rt = state.EX.Rt;
             newState.MEM.Wrt_reg_addr = state.EX.Wrt_reg_addr;
@@ -548,6 +559,14 @@ int main()
             // newState.EX.wrt_mem = 0;
             // newState.EX.alu_op = 1;
             // newState.EX.wrt_enable = 0;
+
+            isLoad = false;
+
+            isStore = false;
+            Itype = false;
+            Jtype = false;
+            isBranch = false;
+            isEq=true;
              newState.EX.nop = 1;
         }
         else
@@ -659,9 +678,11 @@ int main()
                     newState.ID.Instr = state.ID.Instr;
                     newState.ID.nop = 1;
                     bitset<32> adder = bitset<32>(signextimm(bitset<16>(strins.substr(16, 16))).to_string().substr(2, 30) + "00");
-                    adder = bitadd(adder, state.IF.PC);
-                    newState.IF.PC = bitadd(adder, bitset<32>(4));
+                    // when decoding the branch, PC already pointing to next ins, no need to add 4 again
+                    //adder = bitadd(adder, bitset<32>(4));
+                    newState.IF.PC = bitadd(adder, state.IF.PC);
                     newState.IF.nop = 0;
+                    //isBranch=false;//clear signal to prevent loop
                     //addr = pc+4+immd
                 }
                 else
@@ -685,9 +706,9 @@ int main()
         }
         // halt don't need to pass to ID, just nop ID
         //starting next round, ID will inheritate the nop from IF
-        newState.IF.nop = halt ? 1 : 0;
-        newState.ID.nop = halt ? 1 : 0;
-        ////
+        newState.IF.nop = halt ? 1 : newState.IF.nop;
+        newState.ID.nop = halt ? 1 : newState.ID.nop;
+        cout<<cycle<<"  after IF:rf1 ::  "<<myRF.readRF(bitset<5>(1)).to_ulong()<<"/"<<myRF.readRF(bitset<5>(2)).to_ulong()<<"/"<<myRF.readRF(bitset<5>(3)).to_ulong()<<"/"<<endl;
         //clear stall state after settled next round
         stall = false;
         if (state.IF.nop && state.ID.nop && state.EX.nop && state.MEM.nop && state.WB.nop)
