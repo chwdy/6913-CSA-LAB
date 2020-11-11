@@ -4,5 +4,6 @@
         "bitset": "cpp",
         "iostream": "cpp",
         "xstring": "cpp"
-    }
+    },
+    "cmake.configureOnOpen": true
 }

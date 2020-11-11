@@ -25,11 +25,12 @@ int main (int argc, char** argv) {
 	while (!trace.eof()) {
 		unsigned long pc; bool taken;
 		trace >> std::hex >> pc >> taken;
+		cout << pc <<" :00: " << taken<<endl;
 		bool prediction;
 		prediction = true;
 		out << prediction;
 	}
-	 
+	cout << argc <<endl;
 	trace.close();	
 	out.close();
 }
