@@ -45,12 +45,22 @@ int main(int argc, char **argv)
 	bitset<32> addr;
 	bitset<2> hist;
 	int temp;
-
+	string buffer;
 	while (!trace.eof())
 	{
 		unsigned long pc;
 		bool taken;
 		trace >> std::hex >> pc >> taken;
+
+		//use the following to avoid empty line
+		char c1 = trace.get();
+        char c2 = trace.peek();
+        if (c2 == '\n')
+        {
+            cout << "There is a line" << endl;
+        }
+		//cout<<c1<<"--"<<c2<<endl;
+
 		bool prediction;
 		//pc convert to bit
 		addr = bitset<32>(pc);
@@ -61,7 +71,7 @@ int main(int argc, char **argv)
 		//compare prediction and real
 		//stat
 		//update pht
-		cout << "bit pc" << addr.to_string() << "m bit : " << bitset<32>(addr.to_string().substr(32 - m, m)).to_string() << "row : " << bitset<32>(addr.to_string().substr(32 - m, m)).to_ulong() << " hist : " << hist.to_ulong() << endl;
+		cout << "pc" << pc << "bit pc" << addr.to_string() << " m bit : " << bitset<32>(addr.to_string().substr(32 - m, m)).to_string() << "row : " << bitset<32>(addr.to_string().substr(32 - m, m)).to_ulong() << " hist : " << hist.to_ulong() << endl;
 
 		if (prediction == taken)
 		{
@@ -81,7 +91,7 @@ int main(int argc, char **argv)
 
 		out << prediction;
 	}
-	cout << "STAT: " << corrCnt << " correct | " << wrongCnt << " wrong | Correct rate: " << setprecision(6) << float(corrCnt) / float(corrCnt + wrongCnt) * 100 << "% wrong rate: " << float(wrongCnt) / float(corrCnt + wrongCnt) * 100 << "%"<< endl;
+	cout << "STAT: " << corrCnt << " correct | " << wrongCnt << " wrong | Correct rate: " << setprecision(6) << float(corrCnt) / float(corrCnt + wrongCnt) * 100 << "% wrong rate: " << float(wrongCnt) / float(corrCnt + wrongCnt) * 100 << "%" << endl;
 	trace.close();
 	out.close();
 }
