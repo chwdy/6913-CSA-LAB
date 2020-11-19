@@ -55,35 +55,33 @@ int main(int argc, char **argv)
 		//pc convert to bit
 		addr = bitset<32>(pc);
 		//select pht by bit
-		hist = PHT[bitset<32>(addr.to_string().substr(31 - m, m)).to_ulong()];
+		hist = PHT[bitset<32>(addr.to_string().substr(32 - m, m)).to_ulong()];
 		//predict using pht
 		prediction = hist.to_ulong() >= 2 ? true : false;
 		//compare prediction and real
 		//stat
 		//update pht
+		cout << "bit pc" << addr.to_string() << "m bit : " << bitset<32>(addr.to_string().substr(32 - m, m)).to_string() << "row : " << bitset<32>(addr.to_string().substr(32 - m, m)).to_ulong() << " hist : " << hist.to_ulong() << endl;
+
 		if (prediction == taken)
 		{
-			cout<<pc<<" | taken : "<< taken<<" | predict "<<prediction << " | correct"<<endl;
+			cout << pc << " | taken : " << taken << " | predict " << prediction << " | correct" << endl;
 			corrCnt++;
-			temp = hist.to_ulong();
-			temp++;
-			temp = temp>3?3:temp;
-			PHT[bitset<32>(addr.to_string().substr(31 - m, m)).to_ulong()]  = bitset<2>(temp);
 		}
 		else
 		{
-			cout<<pc<<" | taken : "<< taken<<" | predict "<<prediction << " | Wrong"<<endl;
+			cout << pc << " | taken : " << taken << " | predict " << prediction << " | Wrong" << endl;
 			wrongCnt++;
-			temp = hist.to_ulong();
-			temp--;
-			temp = temp<0?0:temp;
-			PHT[bitset<32>(addr.to_string().substr(31 - m, m)).to_ulong()]  = bitset<2>(temp);
 		};
-		
+		temp = hist.to_ulong();
+		taken ? temp++ : temp--;
+		temp = temp > 3 ? 3 : temp;
+		temp = temp < 0 ? 0 : temp;
+		PHT[bitset<32>(addr.to_string().substr(32 - m, m)).to_ulong()] = bitset<2>(temp);
 
 		out << prediction;
 	}
-	cout << "STAT: " <<corrCnt<<" correct | "<<wrongCnt<<" wrong | Correct rate: " << setprecision(4)<< float(corrCnt)/float(corrCnt+wrongCnt) * 100<<"%"<<endl;
+	cout << "STAT: " << corrCnt << " correct | " << wrongCnt << " wrong | Correct rate: " << setprecision(6) << float(corrCnt) / float(corrCnt + wrongCnt) * 100 << "% wrong rate: " << float(wrongCnt) / float(corrCnt + wrongCnt) * 100 << "%"<< endl;
 	trace.close();
 	out.close();
 }
