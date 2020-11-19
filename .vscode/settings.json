@@ -3,7 +3,9 @@
         "*.js": "javascriptreact",
         "bitset": "cpp",
         "iostream": "cpp",
-        "xstring": "cpp"
+        "xstring": "cpp",
+        "vector": "cpp",
+        "cmath": "cpp"
     },
     "cmake.configureOnOpen": true
 }
