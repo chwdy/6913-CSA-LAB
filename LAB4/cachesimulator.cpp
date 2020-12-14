@@ -69,12 +69,12 @@ int main(int argc, char *argv[])
     int FA2 = 0;
     if (cacheconfig.L1waysize == 0)
     {
-        cacheconfig.L1waysize = cacheconfig.L1size * 1024;
+        cacheconfig.L1waysize = cacheconfig.L1size * 1024/ cacheconfig.L1blocksize;
         FA1 = 1;
     }
     if (cacheconfig.L2waysize == 0)
     {
-        cacheconfig.L2waysize = cacheconfig.L2size * 1024;
+        cacheconfig.L2waysize = cacheconfig.L2size * 1024/ cacheconfig.L2blocksize;
         FA2 = 1;
     }
     // Implement by you:
@@ -108,7 +108,7 @@ int main(int argc, char *argv[])
         L2.dirty[i].resize(cacheconfig.L1waysize, 0);
         L2.pointer[i] = 0;
     }
-    cout << L1.tag.size() << " " << L1.tag[0].size() << " " << L2.tag.size() << " " << L2.tag[0].size() << endl;
+    cout <<"L1 index size "<< L1.tag.size() << " L1 Way size " << L1.tag[0].size() << " L2 index size" << L2.tag.size() << " L2 way size" << L2.tag[0].size() << endl;
 
     int L1AcceState = 0; // L1 access state variable, can be one of NA, RH, RM, WH, WM;
     int L2AcceState = 0; // L2 access state variable, can be one of NA, RH, RM, WH, WM;
@@ -134,7 +134,7 @@ int main(int argc, char *argv[])
     int indexbit2 = log2(cacheconfig.L2size * 1024 / cacheconfig.L2blocksize / cacheconfig.L2waysize);
     int waysize1 = cacheconfig.L1waysize;
     int waysize2 = cacheconfig.L2waysize;
-    cout << blockbit1 << " " << indexbit1 << " " << blockbit2 << " " << indexbit2 << " " << waysize1 << " " << waysize2 << endl;
+    cout <<"L1 block bit "<< blockbit1 << " L1 index bit" << indexbit1 << " L2 block bit" << blockbit2 << " L2 index bit " << indexbit2 << " L1 way size " << waysize1 << " L2 way size " << waysize2 << endl;
     if (FA1)
     {
         indexbit1 = 0;
