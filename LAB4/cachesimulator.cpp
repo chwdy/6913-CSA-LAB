@@ -39,9 +39,9 @@ class cache {
 */
 struct cache
 {
-    vector<vector<string>> tag;
-    vector<vector<int>> valid;
-    vector<vector<int>> dirty;
+    vector<vector<string> > tag;
+    vector<vector<int> > valid;
+    vector<vector<int> > dirty;
     vector<int> pointer;
 };
 
@@ -118,8 +118,8 @@ int main(int argc, char *argv[])
     string outname;
     //outname = string(argv[2]) + ".out";
     //traces.open(argv[2]);
-    outname = string("tracea.txt") + ".out";
-    traces.open("tracea.txt");
+    outname = string("trace.txt") + ".out";
+    traces.open("trace.txt");
     tracesout.open(outname.c_str());
 
     string line;
@@ -171,10 +171,6 @@ int main(int argc, char *argv[])
             string strIndex2 = accessaddr.to_string().substr(32 - indexbit2 - blockbit2, indexbit2);
             int intIndex1 = bitset<32>(strIndex1).to_ulong();
             int intIndex2 = bitset<32>(strIndex2).to_ulong();
-            int waypointer1 = L1.pointer[intIndex1];
-            int waypointer2 = L2.pointer[intIndex2];
-            cout << "strTag1 " << strTag1 << " strIndex1 " << strIndex1 << " strTag2 " << strTag2 << " strIndex2 " << strIndex2 << endl;
-            cout << "intIndex1 " << intIndex1 << " intIndex2 " << intIndex2 << " waypointer1 " << waypointer1 << " waypointer2 " << waypointer2 << endl;
             if (FA1)
             {
                 indexbit1 = 0;
@@ -183,6 +179,11 @@ int main(int argc, char *argv[])
             {
                 intIndex2 = 0;
             }
+            int waypointer1 = L1.pointer[intIndex1];
+            int waypointer2 = L2.pointer[intIndex2];
+            cout << "strTag1 " << strTag1 << " strIndex1 " << strIndex1 << " strTag2 " << strTag2 << " strIndex2 " << strIndex2 << endl;
+            cout << "intIndex1 " << intIndex1 << " intIndex2 " << intIndex2 << " waypointer1 " << waypointer1 << " waypointer2 " << waypointer2 << endl;
+            
 
             if (accesstype.compare("R") == 0)
             {
@@ -190,10 +191,10 @@ int main(int argc, char *argv[])
                 L1AcceState = 2;
                 for (int w = 0; w < waysize1; w++)
                 {
-                    cout << " L1 - checking way : " << w << endl;
+                    //cout << " checking way : " << w << endl;
                     if (L1.tag[intIndex1][w] == strTag1)
                     {
-                        cout << "     tag match " << strTag1 << endl;
+                        cout << "     L1 - tag match " << strTag1 << "at way "<<w<<endl;
                         if (L1.valid[intIndex1][w])
                         {
                             cout << "         valid - read hit" << endl;
@@ -209,21 +210,104 @@ int main(int argc, char *argv[])
                     L2AcceState = 2;
                     for (int w = 0; w < waysize2; w++)
                     {
-                        cout << " L2 - checking way : " << w << endl;
+                        //cout << " checking way : " << w << endl;
                         if (L2.tag[intIndex2][w] == strTag2)
                         {
-                            cout << "     tag match " << strTag2 << endl;
+                            cout << "     L2 - tag match " << strTag2 << "at way "<<w<<endl;
                             if (L2.valid[intIndex2][w])
                             {
                                 cout << "         valid - read hit" << endl;
                                 L2AcceState = 1;
+                                L2.valid[intIndex2][w] = 0;
+                                cout << "         marked as unvalid, will move to L1" << endl;
                                 break;
                             }
                         }
                     }
                 }
+                //if L1 missed , move to L1
+                if (L1AcceState == 2)
+                {
+                    cout << "Moving data to L1" << endl;
+                    int AvailWayL1 = -1;
+                    for (int w = 0; w < waysize1; w++)
+                    {
+                        //cout << " checking way : " << w << endl;
+
+                        if (L1.valid[intIndex1][w] == 0)
+                        {
+                            cout << "   L1 -  way " << w << " is empty" << endl;
+                            AvailWayL1 = w;
+                            break;
+                        }
+                    }
+
+                    if (AvailWayL1 == -1)
+                    { //L1 full, evict to l2
+                        string tranferaddr = L1.tag[intIndex1][waypointer1] + bitset<32>(intIndex1).to_string().substr(32 - indexbit1, indexbit1) + bitset<32>(0).to_string().substr(0, blockbit1);
+                        string strTag22 = tranferaddr.substr(0, 32 - indexbit2 - blockbit2);
+                        string strIndex22 = tranferaddr.substr(32 - indexbit2 - blockbit2, indexbit2);
+                        int intIndex22 = bitset<32>(strIndex2).to_ulong();
+                        if (FA2)
+                        {
+                            intIndex22 = 0;
+                        }
+                        int waypointer22 = L2.pointer[intIndex22];
+                        
+
+                        cout << "    L1 full, evict to L2 transfer addr: " << tranferaddr << endl;
+                        int AvailWayL2 = -1;
+                        for (int w = 0; w < waysize2; w++)
+                        {
+                            //cout << "       checking way : " << w << endl;
+                            if (L2.valid[intIndex22][w] == 0)
+                            {
+                                cout << "        L2 -  way " << w << " is empty" << endl;
+                                AvailWayL2 = w;
+                                break;
+                            }
+                        }
+                        if (AvailWayL2 == -1)
+                        {
+                            cout << "    L2 full, evict" << endl;
+                            //////
+                            //ignore lower level
+                            //////
+                            //point to evict space
+
+                            AvailWayL2 = L2.pointer[intIndex22];
+                            cout << "    L2 point to" << AvailWayL2 << endl;
+                            L2.pointer[intIndex22]++;
+                            if (L2.pointer[intIndex22] >= waysize2)
+                            {
+                                cout << "    L2 pointer in index " << intIndex22 << " reset to 0 from" << L2.pointer[intIndex22] << endl;
+                                L2.pointer[intIndex22] = 0;
+                            }
+                        }
+                        // save to L2
+                        L2.dirty[intIndex22][AvailWayL2] = 0;
+                        L2.tag[intIndex22][AvailWayL2] = strTag22;
+                        L2.valid[intIndex22][AvailWayL2] = 1;
+                        cout << "    WRITE L2  index: " << intIndex22 << "  way: " << AvailWayL2 << "  tag : " << strTag22 << endl;
+                        //point to evict space
+                        AvailWayL1 = L1.pointer[intIndex1];
+                        cout << "L1 will write to " << AvailWayL1 << endl;
+                        L1.pointer[intIndex1]++;
+                        if (L1.pointer[intIndex1] >= waysize1)
+                        {
+                            cout << "L1 pointer in index " << intIndex1 << " reset to 0 from" << L1.pointer[intIndex1] << endl;
+                            L1.pointer[intIndex1] = 0;
+                        }
+                    }
+                    //save to L1
+                    L1.dirty[intIndex1][AvailWayL1] = 0;
+                    L1.tag[intIndex1][AvailWayL1] = strTag1;
+                    L1.valid[intIndex1][AvailWayL1] = 1;
+                    cout << "WRITE L1  index: " << intIndex1 << "  way: " << AvailWayL1 << "  tag : " << strTag1 << endl;
+                }
+
                 //  update the L1 and L2 access state variable;
-                if (L1AcceState == 2 && L2AcceState == 2)
+                /* if (L1AcceState == 2 && L2AcceState == 2)
                 {
                     cout << "all read missed" << endl;
                     //make space first and then write
@@ -329,7 +413,7 @@ int main(int argc, char *argv[])
                         cout << "L1 pointer in index " << intIndex1 << " reset to 0 from" << L1.pointer[intIndex1] << endl;
                         L1.pointer[intIndex1] = 0;
                     }
-                }
+                } */
             }
             else
             {
@@ -340,10 +424,10 @@ int main(int argc, char *argv[])
                 for (int w = 0; w < waysize1; w++)
                 {
                     //cout << "DEBUG" << endl;
-                    cout << " L1 - checking way : " << w << endl;
+                    //cout << " checking way : " << w << endl;
                     if (L1.tag[intIndex1][w] == strTag1)
                     {
-                        cout << "     tag match " << strTag1 << endl;
+                        cout << "     L1 - tag match " << strTag1 << "at way "<<w<<endl;
                         if (L1.valid[intIndex1][w])
                         {
                             L1AcceState = 3;
@@ -359,10 +443,10 @@ int main(int argc, char *argv[])
                     L2AcceState = 4;
                     for (int w = 0; w < waysize2; w++)
                     {
-                        cout << " L2 - checking way : " << w << endl;
+                        //cout << " checking way : " << w << endl;
                         if (L2.tag[intIndex2][w] == strTag2)
                         {
-                            cout << "     tag match " << strTag2 << endl;
+                            cout << "     L2 - tag match " << strTag2 << "at way "<<w<<endl;
                             if (L2.valid[intIndex2][w])
                             {
                                 L2AcceState = 3;

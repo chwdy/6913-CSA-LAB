@@ -1,4 +1,3 @@
-in
 LAB2/dmemresult.txt
 LAB2/stateresult.txt
 LAB2/RFresult.txt
@@ -10,3 +9,5 @@ LAB3/trace.txt.out
 LAB4/trace.txt.out
 LAB4/trace-1k.txt.out
 LAB4/tempCodeRunnerFile.cpp
+LAB4/cachesimulator
+.DS_Store
